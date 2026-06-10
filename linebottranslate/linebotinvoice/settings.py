@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'invoiceapp',  # ← 這裡要是你原本資料夾的名字，絕對不是 translateapi
-    'variable_settings', 
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
