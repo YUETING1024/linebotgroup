@@ -320,19 +320,34 @@ def get_daily_article(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='發生錯誤！'))
 
 # 新增功能：特別教學語音
-def handle_special_teaching(event, mtext):
+def handle_special_teaching(event, mtext, base_url):
     try:
-        # 由於需要 https 的音檔網址，這裡先放一個測試音檔的連結
-        # 可以將自己念文章的音檔上傳到雲端，並替換為直連 .mp3 或 .m4a 網址
-        audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        from urllib.parse import quote
         
-        message = AudioSendMessage(
-            original_content_url=audio_url,
-            duration=60000  # 語音長度，單位為毫秒 (60000 = 60秒)
-        )
-        line_bot_api.reply_message(event.reply_token, message)
-    except:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='發生錯誤！'))
+        names = ["李維駿", "查月婷", "黃沛慈", "黃雍原"]
+        target_name = None
+        for name in names:
+            if name in mtext:
+                target_name = name
+                break
+                
+        if target_name:
+            # 將中文檔名編碼為網址格式
+            encoded_name = quote(f"{target_name}.m4a")
+            audio_url = f"{base_url}/static/{encoded_name}"
+            
+            message = AudioSendMessage(
+                original_content_url=audio_url,
+                duration=60000  # 若需要精準時間可針對不同人調整
+            )
+            line_bot_api.reply_message(event.reply_token, message)
+        else:
+            line_bot_api.reply_message(
+                event.reply_token, 
+                TextSendMessage(text='請輸入完整的名字！例如：@特別教學 李維駿')
+            )
+    except Exception as e:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f'發生錯誤！{str(e)}'))
 
 @csrf_exempt
 def callback(request):
@@ -347,6 +362,9 @@ def callback(request):
             return HttpResponseBadRequest()
 
         from linebot.models import TextMessage
+        
+        # 取得目前的網址 (例如 ngrok 或正式主機網址)，確保是 https
+        base_url = request.build_absolute_uri('/').replace('http://', 'https://').rstrip('/')
 
         for event in events:
             if isinstance(event, MessageEvent):
@@ -370,7 +388,7 @@ def callback(request):
                 elif mtext == '@今日閱讀練習':
                     get_daily_article(event)
                 elif mtext.startswith('@特別教學'):
-                    handle_special_teaching(event, mtext)
+                    handle_special_teaching(event, mtext, base_url)
                 elif mtext.startswith('@'):
                     # 只要是其他 @ 開頭的，一律進到查單字邏輯
                     searchWord(event, mtext)
